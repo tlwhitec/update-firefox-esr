@@ -11,3 +11,11 @@ This script is there to download whatever latest build there is for your platfor
 Among some very usual shell commands, this script uses the following tools which are not usually preinstalled, but can be found in your Linux distro's repositories:
 - **curl** to check for the latest version
 - **wget** to download the new file
+
+## Operation
+1. Check for the currently available Firefox ESR version online.
+2. Check for your installed version in `/opt/firefox-esr`, if any.
+2.1. If not, it creates a symlink in `/usr/local/bin/firefox`, which usually comes first when the shell is searching for the `firefox` executable, so there's no need to uninstall your distro's default firefox.
+3. When all is sensible up to this point, the update is downloaded.
+4. When any firefox instance is running, it asks you to close it. Y'know, just to be sure.
+5. You are asked for your sudo password. Then the old installation is removed and replaced with the installed update.
