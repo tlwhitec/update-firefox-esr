@@ -14,8 +14,9 @@ Among some very usual shell commands, this script uses the following tools which
 
 ## Operation
 1. Check for the currently available Firefox ESR version online.
-2. Check for your installed version in `/opt/firefox-esr`, if any.
-2.1. If not, it creates a symlink in `/usr/local/bin/firefox`, which usually comes first when the shell is searching for the `firefox` executable, so there's no need to uninstall your distro's default firefox.
-3. When all is sensible up to this point, the update is downloaded.
+2. Check for your installed version in `/opt/firefox-esr`.
+    1. If there's none, you are asked to confirm a fresh install. Then it creates a symlink in `/usr/local/bin/firefox`, which usually comes first when the shell is searching for the `firefox` executable, so there's no need to uninstall your distro's default firefox.
+    2. If the installed version matches the version online, there's nothing to do and the update ends.
+3. When all makes sense up to this point, the update is downloaded.
 4. When any firefox instance is running, it asks you to close it. Y'know, just to be sure.
 5. You are asked for your sudo password. Then the old installation is removed and replaced with the installed update.
