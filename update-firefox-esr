@@ -1,0 +1,89 @@
+#!/bin/sh
+
+#    Copyright 2017 Vít Zikmund
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+set -e # fail on 1st error
+set -o pipefail # pass errors from depths of a pipeline
+
+FFINSTDIR=/opt
+FFBASEDIR=firefox-esr
+SYMLINK=/usr/local/bin/firefox
+
+ffdir="$FFINSTDIR/$FFBASEDIR"
+ffbin="$ffdir/firefox"
+
+echo -n "Newest available version is "
+# e.g. https://download-installer.cdn.mozilla.net/pub/firefox/releases/52.5.0esr/linux-x86_64/en-US/firefox-52.5.0esr.tar.bz2
+ffnewurl=$(curl -s --head 'https://download.mozilla.org/?product=firefox-esr-latest&os=linux64&lang=en-US' | sed -n 's/Location: \?\([[:print:]]\+\).*/\1/p')
+ffnewver=$(echo -n $ffnewurl | sed 's/.*firefox-\([[:digit:]]\+\(\.[[:digit:]]\)*\).*/\1/')
+ffnewfile=$(basename $ffnewurl)
+echo "$ffnewver ($ffnewfile)"
+
+if [[ -e "$ffbin" ]]; then
+    ffmyver="$($ffbin --version | grep -o '[[:digit:].]\+')"
+    echo "Current installed version is $ffmyver ($ffbin)"
+    if [[ "$ffmyver" == "$ffnewver" ]]; then
+        echo Nothing to do.
+        exit
+    fi
+else
+    echo -en "It appears your firefox-esr is not installed (at least not in $ffbin).\nDo you want to do a fresh install [N/y]: "
+    while read answer; do
+        echo answer is $answer
+        if [[ $answer == "" || ${answer:0:1} == [nN] ]]; then
+            exit
+        elif [[ ${answer:0:1} == [yY] ]]; then
+            # check for the correct symlink existence
+            if [[ ! -h "$SYMLINK" ]]; then
+                if [[ -e "$SYMLINK" ]]; then
+                    echo "File $SYMLINK is not a symlink, not updating"
+                else
+                    echo "Creating symlink $SYMLINK -> $ffbin"
+                    sudo ln -s "$ffbin" "$SYMLINK"
+                fi
+            else
+                oldlink=$(readlink "$SYMLINK")
+                if [[ $oldlink != "$ffbin" ]]; then
+                    echo "Updating previous symlink $SYMLINK -> $oldlink to $ffbin"
+                    sudo rm "$SYMLINK"
+                    sudo ln -s "$ffbin" "$SYMLINK"
+                fi
+            fi
+            break
+        fi
+    done
+fi
+
+echo "Downloading $ffnewfile"
+wget -P /tmp -c "$ffnewurl"
+
+ffnewpath="/tmp/$ffnewfile"
+echo "Successfully downloaded to $ffnewpath"
+
+while ps -C firefox >/dev/null 2>&1; do
+    echo "Some firefox instance is running. Close it and press enter to continue." 1>&2
+    read
+done
+
+echo "Removing currently installed files in /opt/firefox-esr"
+sudo rm -rf "$ffdir"
+
+echo -n "Extracting downoladed file to $ffdir... "
+sudo tar -xjf "$ffnewpath" -C /opt --transform 's/^firefox/firefox-esr/'
+echo "done"
+
+echo "Removing downloaded file $ffnewpath"
+rm "$ffnewpath"
